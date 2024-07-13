@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Guessing Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+
+        body {
+            font-family: 'Fredoka One', cursive;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(to bottom, #f7cac9, #f6e1b5);
+            color: #444;
+        }
+        .game-container, .guesses-container {
+            padding: 20px;
+            margin-top: 50px;
+            border: 5px solid #ff6f61;
+            border-radius: 10px;
+            background-color: #fff3e0;
+            width: 80%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 3em;
+            color: #ff6f61;
+            text-shadow: 2px 2px #ffa07a;
+            animation: pop 1s infinite alternate;
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        .input-group input {
+            padding: 10px;
+            width: 200px;
+            font-size: 1.2em;
+            border: 2px solid #ff6f61;
+            border-radius: 5px;
+            outline: none;
+            box-shadow: 0 4px #ffa07a;
+        }
+        .input-group button {
+            padding: 10px 20px;
+            font-size: 1.5em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #ff6f61;
+            color: white;
+            box-shadow: 0 4px #ffa07a;
+            margin-left: 10px;
+        }
+        .input-group button:active {
+            box-shadow: none;
+            transform: translateY(4px);
+        }
+        .hidden-word {
+            font-size: 2em;
+            letter-spacing: 2px;
+            color: #444;
+        }
+        #message {
+            font-size: 2.5em;
+            margin-top: 20px;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+        .shake {
+            animation: shake 1s infinite;
+        }
+        @keyframes wobble {
+            0% { transform: translateX(0); }
+            15% { transform: translateX(-25%) rotate(-5deg); }
+            30% { transform: translateX(20%) rotate(3deg); }
+            45% { transform: translateX(-15%) rotate(-3deg); }
+            60% { transform: translateX(10%) rotate(2deg); }
+            75% { transform: translateX(-5%) rotate(-1deg); }
+            100% { transform: translateX(0); }
+        }
+        .wobble {
+            animation: wobble 1s infinite;
+        }
+        #attempts {
+            font-size: 1.5em;
+            color: #ff6f61;
+        }
+        #guessedChars {
+            font-size: 2.5em;
+            margin-top: 20px;
+        }
+        #banner {
+            display: none;
+            padding: 20px;
+            background-color: #ff6f61;
+            color: white;
+            border-radius: 10px;
+            margin: 20px auto;
+            width: 80%;
+            max-width: 600px;
+        }
+        #banner button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 2em;
+            border: none;
+            border-radius: 10px;
+            background-color: white;
+            color: #ff6f61;
+            cursor: pointer;
+        }
+        .guesses-container {
+            margin-top: 20px;
+            padding: 20px;
+            border: 5px solid #ff6f61;
+            border-radius: 10px;
+            background-color: #fff3e0;
+            width: 80%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        .guesses-container button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #ff6f61;
+            color: white;
+            box-shadow: 0 4px #ffa07a;
+            margin-left: 10px;
+        }
+        .guesses-container button:active {
+            box-shadow: none;
+            transform: translateY(4px);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>⏰Word Guess Game⏰</h1>
+        <p id="hiddenWord" class="hidden-word"></p>
+        <p id="timer" style="font-size: 2em;">Time: <span id="countdown"></span></p>
+        <p id="message"></p>
+        <div class="input-group">
+            <input type="text" id="guessChar" placeholder="Enter a character" maxlength="1">
+            <button id="submitGuess">Guess</button>
+            <button id="resetGame">Reset</button>
+        </div>
+        <p id="attempts">Lives left: 10</p>
+    </div>
+    <div id="banner">
+        <p>⏰ Already used. Try another letter quick ⏰</p>
+        <button id="closeBanner">OK</button>
+    </div>
+    <div class="guesses-container">
+        <p>GUESSED ▶️: <span id="guessedChars"></span></p>
+        <button id="quitGame">Quit</button>
+    </div>
+    <script>
+        const dictionaryAPI = "https://random-word-api.herokuapp.com/word?number=1";
+        let selectedWord = "";
+        let displayedWord = "";
+        let guessedCharacters = new Set();
+        let attemptsLeft = 10;
+        let countdownInterval;
+        let remainingSeconds = 0;
+        let gameStarted = false;
+
+        async function fetchRandomWord() {
+            const response = await fetch(dictionaryAPI);
+            const words = await response.json();
+            return words[0].charAt(0).toUpperCase() + words[0].slice(1);
+        }
+
+        async function startGame() {
+            selectedWord = await fetchRandomWord();
+            displayedWord = "_".repeat(selectedWord.length);
+            guessedCharacters.clear();
+            attemptsLeft = 10;
+            document.getElementById("hiddenWord").innerText = displayedWord;
+            document.getElementById("attempts").innerText = `Lives left: ${attemptsLeft}`;
+            document.getElementById("message").innerText = "";
+            document.getElementById("message").classList.remove("shake", "wobble");
+            document.getElementById("guessedChars").innerText = "";
+            document.getElementById("guessChar").disabled = false;
+            document.getElementById("submitGuess").disabled = false;
+            document.getElementById("quitGame").disabled = false;
+            clearInterval(countdownInterval);
+            document.getElementById("countdown").innerText = "1:00";
+            gameStarted = false; // Reset gameStarted flag
+        }
+
+        function startCountdown(minutes) {
+            clearInterval(countdownInterval);
+            remainingSeconds = minutes * 60;
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
+        }
+
+        function updateCountdown() {
+            const minutes = Math.floor(remainingSeconds / 60);
+            let seconds = remainingSeconds % 60;
+            seconds = seconds < 10 ? `0${seconds}` : seconds;
+            document.getElementById("countdown").innerText = `${minutes}:${seconds}`;
+            remainingSeconds--;
+
+            if (remainingSeconds < 0) {
+                clearInterval(countdownInterval);
+                endGame();
+            }
+        }
+
+        function submitGuess() {
+            const guessChar = document.getElementById("guessChar").value.toLowerCase().trim();
+            if (!gameStarted) {
+                startCountdown(1); // Start countdown for 1 minute (60 seconds)
+                gameStarted = true;
+            }
+            if (guessChar.length === 1 && /^[a-z]$/.test(guessChar)) {
+                if (!guessedCharacters.has(guessChar)) {
+                    guessedCharacters.add(guessChar);
+                    document.getElementById("guessedChars").innerText = Array.from(guessedCharacters).join(", ");
+                    if (!selectedWord.toLowerCase().includes(guessChar)) {
+                        attemptsLeft--;
+                        document.getElementById("attempts").innerText = `Lives left: ${attemptsLeft}`;
+                    }
+                    updateDisplayedWord(guessChar);
+                    document.getElementById("guessChar").value = "";
+                    if (attemptsLeft <= 0) {
+                        endGame();
+                    }
+                } else {
+                    showBanner();
+                }
+            } else {
+                showBanner();
+            }
+        }
+
+        function showBanner() {
+            document.getElementById("banner").style.display = "block";
+        }
+
+        function closeBanner() {
+            document.getElementById("banner").style.display = "none";
+            document.getElementById("guessChar").focus();
+        }
+
+        function updateDisplayedWord(char) {
+            let newDisplayedWord = "";
+            for (let i = 0; i < selectedWord.length; i++) {
+                if (selectedWord[i].toLowerCase() === char || guessedCharacters.has(selectedWord[i].toLowerCase())) {
+                    newDisplayedWord += selectedWord[i];
+                } else {
+                    newDisplayedWord += "_";
+                }
+            }
+            displayedWord = newDisplayedWord;
+            document.getElementById("hiddenWord").innerText = displayedWord;
+            checkWin();
+        }
+
+        function checkWin() {
+            if (displayedWord === selectedWord) {
+                clearInterval(countdownInterval);
+                const score = remainingSeconds * 1371;
+                document.getElementById("message").innerText = `🏆 Winner 🏆\nScore: ${score} 🎉`;
+                document.getElementById("message").classList.add("wobble");
+                document.getElementById("guessChar").disabled = true;
+                document.getElementById("submitGuess").disabled = true;
+                document.getElementById("resetGame").disabled = false;
+                document.getElementById("quitGame").disabled = true;
+            }
+        }
+
+        function endGame() {
+            document.getElementById("message").innerText = "⏰ Game Over 😭";
+            document.getElementById("message").classList.add("shake");
+            document.getElementById("hiddenWord").innerText = selectedWord;  // Show the full word
+            document.getElementById("guessChar").disabled = true;
+            document.getElementById("submitGuess").disabled = true;
+            document.getElementById("resetGame").disabled = false;
+            document.getElementById("quitGame").disabled = true;
+        }
+
+        function quitGame() {
+            document.getElementById("message").innerText = "Game Quit 😞";
+            document.getElementById("hiddenWord").innerText = selectedWord;  // Show the full word
+            document.getElementById("guessChar").disabled = true;
+            document.getElementById("submitGuess").disabled = true;
+            document.getElementById("resetGame").disabled = false;
+            document.getElementById("quitGame").disabled = true;
+            clearInterval(countdownInterval);
+        }
+
+        document.getElementById("guessChar").addEventListener("input", (event) => {
+            if (!gameStarted && event.target.value.trim() !== "") {
+                startCountdown(1); // Start countdown for 1 minute (60 seconds)
+                gameStarted = true;
+            }
+        });
+        document.getElementById("submitGuess").addEventListener("click", submitGuess);
+        document.getElementById("resetGame").addEventListener("click", startGame);
+        document.getElementById("quitGame").addEventListener("click", quitGame);
+        document.getElementById("closeBanner").addEventListener("click", closeBanner);
+
+        startGame(); // Start the game when the page loads
+    </script>
+</body>
+</html>

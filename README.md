@@ -1,7 +1,7 @@
 - 👋 Hi, I’m @Flowery7
 - 👀 I’m interested in coding 
-- 🌱 I’m currently learning python, js css html
-- 💞️ I’m looking to collaborate
+- 🌱 knowledge of python, js, css, html
+- 💞️ I’m looking to build a network of coders
 - 📫 How to reach me nicksteve21@proton.me
 - 😄 Check out my sample codes
 - ⚡ Fun fact: Love burgers.
